@@ -1,44 +1,55 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-interface BlockData {
-  type: 'primary' | 'secondary' | 'system' | 'context';
+interface BlockSelection {
   label: string;
+  selectedOption: string;
 }
 
 const ConstructionArea: React.FC = () => {
-  const [placedBlocks, setPlacedBlocks] = useState<BlockData[]>([]);
+  const [selections, setSelections] = useState<BlockSelection[]>([]);
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
+  useEffect(() => {
+    const handleBlockSelection = (event: Event) => {
+      const { detail } = event as CustomEvent;
+      setSelections(prev => {
+        // Find if we already have a selection for this block type
+        const existingIndex = prev.findIndex(s => s.label === detail.label);
+        if (existingIndex >= 0) {
+          // Replace the existing selection
+          const newSelections = [...prev];
+          newSelections[existingIndex] = {
+            label: detail.label,
+            selectedOption: detail.selectedOption,
+          };
+          return newSelections;
+        }
+        // Add new selection
+        return [...prev, {
+          label: detail.label,
+          selectedOption: detail.selectedOption,
+        }];
+      });
+    };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const blockData = JSON.parse(e.dataTransfer.getData('text/plain'));
-    setPlacedBlocks((prev) => [...prev, blockData]);
-  };
+    window.addEventListener('blockOptionSelected', handleBlockSelection);
+    return () => window.removeEventListener('blockOptionSelected', handleBlockSelection);
+  }, []);
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      className="min-h-[400px] w-full bg-lego-background rounded-lg p-4 border-2 border-dashed border-gray-300
-                flex flex-col items-center gap-2"
-    >
-      {placedBlocks.map((block, index) => (
-        <div
-          key={index}
-          className={`bg-lego-${block.type} w-32 h-16 rounded-md shadow-lg 
-                     flex items-center justify-center text-white font-medium
-                     animate-block-snap`}
-        >
-          {block.label}
+    <div className="min-h-[200px] w-full bg-white rounded-lg p-6 border-2 border-dashed border-gray-300">
+      {selections.length === 0 ? (
+        <div className="text-gray-400 text-center">
+          Click on blocks above to build your prompt
         </div>
-      ))}
-      {placedBlocks.length === 0 && (
-        <div className="text-gray-400 mt-20">
-          Drag and drop blocks here to build your prompt
+      ) : (
+        <div className="prose max-w-none">
+          {selections.map((selection, index) => (
+            <div key={index} className="mb-2">
+              <span className="font-semibold">{selection.label}:</span>{' '}
+              <span>{selection.selectedOption}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
